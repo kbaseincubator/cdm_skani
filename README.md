@@ -18,11 +18,13 @@ The skani binary is copied out of `ecogenomic/gtdbtk:2.7.2`, which ships skani 0
 
 skani has four subcommands. CTS args follow `args=["<subcommand>", ...flags..., tscli.insert_files()]`.
 
+All modes: pass `-o /out/<name>.tsv` (without `-o`, results go to stdout, which CTS does not keep), and use `num_containers=1` for `triangle` and `dist` (with more containers, each one only compares its own subset of files).
+
 ### `dist` - direct pairwise ANI (no sketching)
 
 ```python
 job = tscli.submit_job(
-    "ghcr.io/kbaseincubator/cdm_skani:0.1.0",
+    "ghcr.io/kbaseincubator/cdm_skani:0.1.0@sha256:3c645fa64e06df1e536a48ef608656ab11c7d5d19fa690c68fee3059effe9da4",
     [query_genome, reference_genome],
     "cts/io/<user>/output/skani_dist/run1",
     cluster="kbase",
@@ -31,9 +33,8 @@ job = tscli.submit_job(
     args=[
         "dist",
         "-o", "/out/ani.tsv",
-        "-q", "/path/to/query.fna",   # see CTS docs for input mount layout
-        "-r", "/path/to/reference.fna",
         "-t", "4",
+        tscli.insert_files(),         # first file is the query, the rest are references
     ],
     num_containers=1,
     cpus=4, memory="8GB", runtime="PT30M",
@@ -83,6 +84,8 @@ skani writes a TSV with the following columns (per `skani dist`, `triangle -E`, 
 `Ref_file`, `Query_file`, `ANI`, `Align_fraction_ref`, `Align_fraction_query`, `Ref_name`, `Query_name`.
 
 For `triangle` without `-E`, output is a phylip-format similarity matrix instead.
+
+**Distant genomes produce no rows.** skani is designed for ANI above about 80%. Pairs below that are dropped by its screen (`-s`, default 80) before alignment, so a header-only output is a normal result for unrelated genomes. Lowering `--min-af` does not change this. To check a run end to end, add `--diagonal` to `triangle`: every genome is then compared with itself and should give one row at ANI 100.
 
 ## Reference
 
